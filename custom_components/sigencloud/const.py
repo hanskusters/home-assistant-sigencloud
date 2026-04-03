@@ -1,0 +1,5 @@
+DOMAIN = "sigencloud"
+BASE_URL = "https://api-eu.sigencloud.com"
+AUTH_ENDPOINT = "/openapi/auth/login/password"
+SPIKE_LOAD_ENDPOINT = "/prediction/aipv/prediction/modify/predictLoad"
+CONF_STATION_ID = "station_id"

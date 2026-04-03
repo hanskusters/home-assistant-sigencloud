@@ -1,0 +1,23 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "SigenCloud",
+        "data": {
+          "username": "Username",
+          "password": "Password",
+          "station_id": "Station ID"
+        },
+        "data_description": {
+          "station_id": "Your SigenCloud station ID"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to SigenCloud. Check your credentials and network."
+    },
+    "abort": {
+      "already_configured": "SigenCloud is already configured."
+    }
+  }
+}
