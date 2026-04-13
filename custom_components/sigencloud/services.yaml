@@ -48,3 +48,20 @@ add_spike_load:
           step: 0.1
           unit_of_measurement: kW
           mode: box
+
+get_spike_loads:
+  name: Get Spike Loads
+  description: Fetch existing AI spike-load records for this station.
+  fields: {}
+
+remove_spike_load:
+  name: Remove Spike Load
+  description: Remove an existing AI spike-load record by event ID.
+  fields:
+    event_id:
+      name: Event ID
+      description: Event ID of the spike-load entry to remove.
+      required: true
+      example: "2041603730691940352"
+      selector:
+        text:

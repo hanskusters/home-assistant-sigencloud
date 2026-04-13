@@ -2,7 +2,13 @@ import json
 import logging
 import aiohttp
 
-from .const import BASE_URL, AUTH_ENDPOINT, SPIKE_LOAD_ENDPOINT
+from .const import (
+    BASE_URL,
+    AUTH_ENDPOINT,
+    SPIKE_LOAD_ENDPOINT,
+    AUTOMATION_LOAD_RECORD_ENDPOINT,
+    AUTOMATION_LOAD_DELETE_ENDPOINT,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,7 +54,13 @@ class SigenCloudApi:
 
         self._token = token
 
-    async def _request(self, method: str, endpoint: str, payload: dict) -> dict:
+    async def _request(
+        self,
+        method: str,
+        endpoint: str,
+        payload: dict | None = None,
+        params: dict | None = None,
+    ) -> dict:
         if self._token is None:
             await self.login()
 
@@ -58,10 +70,14 @@ class SigenCloudApi:
             "Content-Type": "application/json; charset=utf-8",
         }
 
+        request_kwargs = {"headers": headers}
+        if params is not None:
+            request_kwargs["params"] = params
+        if payload is not None:
+            request_kwargs["json"] = payload
+
         try:
-            resp = await session.request(
-                method, f"{BASE_URL}{endpoint}", headers=headers, json=payload
-            )
+            resp = await session.request(method, f"{BASE_URL}{endpoint}", **request_kwargs)
         except aiohttp.ClientError as err:
             raise SigenCloudApiError(f"Connection error: {err}") from err
 
@@ -69,15 +85,25 @@ class SigenCloudApi:
             _LOGGER.debug("Token expired, re-authenticating")
             await self.login()
             headers["Authorization"] = f"Bearer {self._token}"
+            request_kwargs["headers"] = headers
             try:
                 resp = await session.request(
-                    method, f"{BASE_URL}{endpoint}", headers=headers, json=payload
+                    method, f"{BASE_URL}{endpoint}", **request_kwargs
                 )
             except aiohttp.ClientError as err:
                 raise SigenCloudApiError(f"Connection error after re-auth: {err}") from err
 
         if resp.status not in (200, 201):
             body = await resp.text()
+            _LOGGER.error(
+                "SigenCloud API error | %s %s | body: %s | query: %s | response %s: %s",
+                method,
+                f"{BASE_URL}{endpoint}",
+                payload,
+                resp.url.query_string,
+                resp.status,
+                body,
+            )
             raise SigenCloudApiError(f"Request failed with status {resp.status}: {body}")
 
         return await resp.json(content_type=None)
@@ -99,6 +125,27 @@ class SigenCloudApi:
             "power": power,
         }
         return await self._request("POST", SPIKE_LOAD_ENDPOINT, payload)
+
+    async def get_spike_loads(self) -> list | None:
+        endpoint = AUTOMATION_LOAD_RECORD_ENDPOINT.format(
+            station_id=self._station_id
+        )
+        response = await self._request(
+            "GET",
+            endpoint,
+            params={"stationId": self._station_id},
+        )
+        if isinstance(response, dict) and isinstance(response.get("data"), list):
+            return response["data"]
+        return None
+
+    async def remove_spike_load(self, event_id: str) -> dict:
+        params = {"stationId": self._station_id, "eventId": event_id}
+        return await self._request(
+            "POST",
+            AUTOMATION_LOAD_DELETE_ENDPOINT,
+            params=params,
+        )
 
     async def close(self) -> None:
         if self._session and not self._session.closed:

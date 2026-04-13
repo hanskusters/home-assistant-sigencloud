@@ -4,7 +4,7 @@ from datetime import date
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 
 from .api import SigenCloudApi, SigenCloudApiError
 from .const import CONF_STATION_ID, DOMAIN
@@ -12,6 +12,8 @@ from .const import CONF_STATION_ID, DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 SERVICE_ADD_SPIKE_LOAD = "add_spike_load"
+SERVICE_GET_SPIKE_LOADS = "get_spike_loads"
+SERVICE_REMOVE_SPIKE_LOAD = "remove_spike_load"
 
 SERVICE_ADD_SPIKE_LOAD_SCHEMA = vol.Schema(
     {
@@ -20,6 +22,14 @@ SERVICE_ADD_SPIKE_LOAD_SCHEMA = vol.Schema(
         vol.Optional("start_date"): cv.string,
         vol.Required("duration"): vol.All(int, vol.Range(min=1)),
         vol.Required("power"): vol.All(vol.Coerce(float), vol.Range(min=0)),
+    }
+)
+
+SERVICE_GET_SPIKE_LOADS_SCHEMA = vol.Schema({})
+
+SERVICE_REMOVE_SPIKE_LOAD_SCHEMA = vol.Schema(
+    {
+        vol.Required("event_id"): cv.string,
     }
 )
 
@@ -48,11 +58,42 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         except SigenCloudApiError as err:
             _LOGGER.error("Failed to submit spike load: %s", err)
 
+    async def handle_get_spike_loads(call: ServiceCall) -> dict:
+        try:
+            items = await api.get_spike_loads() or []
+            count = len(items)
+            _LOGGER.info("Fetched %s spike load record(s)", count)
+            return {"spikeLoads": items}
+        except SigenCloudApiError as err:
+            _LOGGER.error("Failed to fetch spike loads: %s", err)
+            raise
+
+    async def handle_remove_spike_load(call: ServiceCall) -> None:
+        try:
+            await api.remove_spike_load(event_id=call.data["event_id"])
+            _LOGGER.info("Spike load removed successfully (event_id=%s)", call.data["event_id"])
+        except SigenCloudApiError as err:
+            _LOGGER.error("Failed to remove spike load: %s", err)
+            raise
+
     hass.services.async_register(
         DOMAIN,
         SERVICE_ADD_SPIKE_LOAD,
         handle_add_spike_load,
         schema=SERVICE_ADD_SPIKE_LOAD_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_GET_SPIKE_LOADS,
+        handle_get_spike_loads,
+        schema=SERVICE_GET_SPIKE_LOADS_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_REMOVE_SPIKE_LOAD,
+        handle_remove_spike_load,
+        schema=SERVICE_REMOVE_SPIKE_LOAD_SCHEMA,
     )
 
     return True
@@ -62,4 +103,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     api: SigenCloudApi = hass.data[DOMAIN].pop(entry.entry_id)
     await api.close()
     hass.services.async_remove(DOMAIN, SERVICE_ADD_SPIKE_LOAD)
+    hass.services.async_remove(DOMAIN, SERVICE_GET_SPIKE_LOADS)
+    hass.services.async_remove(DOMAIN, SERVICE_REMOVE_SPIKE_LOAD)
     return True
