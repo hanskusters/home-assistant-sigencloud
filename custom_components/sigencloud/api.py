@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 import aiohttp
 
 from .const import (
@@ -23,6 +24,7 @@ class SigenCloudApi:
         self._password = password
         self._station_id = station_id
         self._token: str | None = None
+        self._token_expires_at: float | None = None
         self._session: aiohttp.ClientSession | None = None
 
     def _get_session(self) -> aiohttp.ClientSession:
@@ -53,6 +55,28 @@ class SigenCloudApi:
             raise SigenCloudApiError(f"Could not find accessToken in login response: {data}")
 
         self._token = token
+        expires_in = raw.get("expiresIn")
+        if expires_in is not None:
+            # Refresh 60 seconds before actual expiry
+            self._token_expires_at = time.monotonic() + int(expires_in) - 60
+            _LOGGER.debug("Token acquired, expires in %s seconds", expires_in)
+        else:
+            self._token_expires_at = None
+
+    def _token_needs_refresh(self) -> bool:
+        """Return True if the token is absent or will expire within the buffer window."""
+        if self._token is None:
+            return True
+        if self._token_expires_at is None:
+            return False
+        return time.monotonic() >= self._token_expires_at
+
+    @property
+    def refresh_in(self) -> float | None:
+        """Seconds until the token should be proactively refreshed. None if unknown."""
+        if self._token_expires_at is None:
+            return None
+        return max(0.0, self._token_expires_at - time.monotonic())
 
     async def _request(
         self,
@@ -61,7 +85,8 @@ class SigenCloudApi:
         payload: dict | None = None,
         params: dict | None = None,
     ) -> dict:
-        if self._token is None:
+        if self._token_needs_refresh():
+            _LOGGER.debug("Token absent or nearing expiry, refreshing proactively")
             await self.login()
 
         session = self._get_session()
@@ -80,18 +105,6 @@ class SigenCloudApi:
             resp = await session.request(method, f"{BASE_URL}{endpoint}", **request_kwargs)
         except aiohttp.ClientError as err:
             raise SigenCloudApiError(f"Connection error: {err}") from err
-
-        if resp.status == 401:
-            _LOGGER.debug("Token expired, re-authenticating")
-            await self.login()
-            headers["Authorization"] = f"Bearer {self._token}"
-            request_kwargs["headers"] = headers
-            try:
-                resp = await session.request(
-                    method, f"{BASE_URL}{endpoint}", **request_kwargs
-                )
-            except aiohttp.ClientError as err:
-                raise SigenCloudApiError(f"Connection error after re-auth: {err}") from err
 
         if resp.status not in (200, 201):
             body = await resp.text()
