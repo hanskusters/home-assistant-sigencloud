@@ -7,6 +7,7 @@ from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 
 from .api import SigenCloudApi, SigenCloudApiError
 from .const import DOMAIN
+from .coordinator import SpikeLoadCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,9 +35,15 @@ _SCHEMA_REMOVE = vol.Schema(
 
 
 class SpikeLoadServices:
-    def __init__(self, hass: HomeAssistant, api: SigenCloudApi) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        api: SigenCloudApi,
+        coordinator: SpikeLoadCoordinator | None = None,
+    ) -> None:
         self._hass = hass
         self._api = api
+        self._coordinator = coordinator
 
     async def _handle_add(self, call: ServiceCall) -> None:
         start_date = call.data.get("start_date", date.today().isoformat())
@@ -50,6 +57,7 @@ class SpikeLoadServices:
                 power=call.data["power"],
             )
             _LOGGER.info("Spike load submitted successfully")
+            await self._async_refresh_coordinator()
         except SigenCloudApiError as err:
             _LOGGER.error("Failed to submit spike load: %s", err)
 
@@ -66,9 +74,14 @@ class SpikeLoadServices:
         try:
             await self._api.remove_spike_load(event_id=call.data["event_id"])
             _LOGGER.info("Spike load removed successfully (event_id=%s)", call.data["event_id"])
+            await self._async_refresh_coordinator()
         except SigenCloudApiError as err:
             _LOGGER.error("Failed to remove spike load: %s", err)
             raise
+
+    async def _async_refresh_coordinator(self) -> None:
+        if self._coordinator is not None:
+            await self._coordinator.async_request_refresh()
 
     def register(self) -> None:
         self._hass.services.async_register(

@@ -7,9 +7,12 @@ from homeassistant.helpers.event import async_call_later
 
 from .api import SigenCloudApi, SigenCloudApiError
 from .const import CONF_STATION_ID, DOMAIN
+from .coordinator import SpikeLoadCoordinator
 from .spike_load_services import SpikeLoadServices
 
 _LOGGER = logging.getLogger(__name__)
+
+PLATFORMS = ["sensor"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -40,19 +43,29 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     _schedule_next_refresh()
 
-    services = SpikeLoadServices(hass, api)
+    coordinator = SpikeLoadCoordinator(hass, api)
+    await coordinator.async_config_entry_first_refresh()
+
+    services = SpikeLoadServices(hass, api, coordinator)
     services.register()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "api": api,
         "cancel_refresh": _cancel_refresh,
+        "coordinator": coordinator,
         "services": services,
     }
+
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if not unload_ok:
+        return False
+
     entry_data = hass.data[DOMAIN].pop(entry.entry_id)
     api: SigenCloudApi = entry_data["api"]
     cancel_refresh = entry_data["cancel_refresh"]
