@@ -1,0 +1,12 @@
+{
+  "domain": "sigencloud",
+  "name": "SigenCloud",
+  "version": "0.1.0",
+  "documentation": "https://developer.sigencloud.com",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": ["@hanskusters"],
+  "iot_class": "cloud_push",
+  "config_flow": true,
+  "license": "MIT"
+}

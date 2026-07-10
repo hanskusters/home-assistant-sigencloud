@@ -1,0 +1,67 @@
+add_spike_load:
+  name: Add Spike Load
+  description: >
+    Submit a predicted spike load to SigenCloud AI to help it plan battery
+    charge/discharge cycles ahead of time.
+  fields:
+    load_type:
+      name: Load Type
+      description: "Type of load (e.g. 4 = car charging)"
+      required: true
+      example: 4
+      selector:
+        number:
+          min: 1
+          mode: box
+    start_time:
+      name: Start Time
+      description: "Local start time in HH:MM format"
+      required: true
+      example: "13:15"
+      selector:
+        time:
+    start_date:
+      name: Start Date
+      description: "Date in YYYY-MM-DD format. Defaults to today if omitted."
+      required: false
+      example: "2026-04-04"
+      selector:
+        date:
+    duration:
+      name: Duration
+      description: Duration in minutes
+      required: true
+      example: 180
+      selector:
+        number:
+          min: 1
+          unit_of_measurement: min
+          mode: box
+    power:
+      name: Power
+      description: Expected power draw in kW
+      required: true
+      example: 10
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          unit_of_measurement: kW
+          mode: box
+
+get_spike_loads:
+  name: Get Spike Loads
+  description: Fetch existing AI spike-load records for this station.
+  fields: {}
+
+remove_spike_load:
+  name: Remove Spike Load
+  description: Remove an existing AI spike-load record by event ID.
+  fields:
+    event_id:
+      name: Event ID
+      description: Event ID of the spike-load entry to remove.
+      required: true
+      example: "2041603730691940352"
+      selector:
+        text:
