@@ -4,6 +4,7 @@ from datetime import date
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
+from homeassistant.helpers.debounce import Debouncer
 
 from .api import SigenCloudApi, SigenCloudApiError
 from .const import DOMAIN
@@ -14,6 +15,12 @@ _LOGGER = logging.getLogger(__name__)
 SERVICE_ADD_SPIKE_LOAD = "add_spike_load"
 SERVICE_GET_SPIKE_LOADS = "get_spike_loads"
 SERVICE_REMOVE_SPIKE_LOAD = "remove_spike_load"
+
+# Coalesce a burst of add/remove calls (e.g. an automation loop) into a single
+# refresh. immediate=False means no refresh fires at the start of the burst;
+# one runs once the burst has settled, so the sensor updates straight to the
+# final count instead of stepping through intermediate values.
+_REFRESH_COOLDOWN_SECONDS = 5.0
 
 _SCHEMA_ADD = vol.Schema(
     {
@@ -44,6 +51,15 @@ class SpikeLoadServices:
         self._hass = hass
         self._api = api
         self._coordinator = coordinator
+        self._refresh_debouncer: Debouncer | None = None
+        if coordinator is not None:
+            self._refresh_debouncer = Debouncer(
+                hass,
+                _LOGGER,
+                cooldown=_REFRESH_COOLDOWN_SECONDS,
+                immediate=False,
+                function=coordinator.async_refresh,
+            )
 
     async def _handle_add(self, call: ServiceCall) -> None:
         start_date = call.data.get("start_date", date.today().isoformat())
@@ -80,8 +96,8 @@ class SpikeLoadServices:
             raise
 
     async def _async_refresh_coordinator(self) -> None:
-        if self._coordinator is not None:
-            await self._coordinator.async_request_refresh()
+        if self._refresh_debouncer is not None:
+            await self._refresh_debouncer.async_call()
 
     def register(self) -> None:
         self._hass.services.async_register(
@@ -99,6 +115,8 @@ class SpikeLoadServices:
         )
 
     def unregister(self) -> None:
+        if self._refresh_debouncer is not None:
+            self._refresh_debouncer.async_shutdown()
         self._hass.services.async_remove(DOMAIN, SERVICE_ADD_SPIKE_LOAD)
         self._hass.services.async_remove(DOMAIN, SERVICE_GET_SPIKE_LOADS)
         self._hass.services.async_remove(DOMAIN, SERVICE_REMOVE_SPIKE_LOAD)
