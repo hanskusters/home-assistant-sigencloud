@@ -7,5 +7,6 @@
   "dependencies": [],
   "codeowners": ["@hanskusters"],
   "iot_class": "cloud_push",
-  "config_flow": true
+  "config_flow": true,
+  "license": "MIT"
 }
