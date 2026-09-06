@@ -11,3 +11,4 @@ AUTOMATION_LOAD_RECORD_ENDPOINT = (
     "/prediction/aipv/prediction/get/automationLoadRecord/{station_id}"
 )
 AUTOMATION_LOAD_DELETE_ENDPOINT = "/prediction/aipv/prediction/del/automationLoad"
+MANUAL_CONTROL_ENDPOINT = "/device/energy-profile/instant/manunal"

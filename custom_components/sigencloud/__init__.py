@@ -8,7 +8,7 @@ from homeassistant.helpers.event import async_call_later
 from .api import SigenCloudApi, SigenCloudApiError
 from .const import CONF_STATION_ID, DOMAIN
 from .coordinator import SpikeLoadCoordinator
-from .spike_load_services import SpikeLoadServices
+from .services import ManualControlServices, SpikeLoadServices
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,14 +46,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = SpikeLoadCoordinator(hass, api)
     await coordinator.async_config_entry_first_refresh()
 
-    services = SpikeLoadServices(hass, api, coordinator)
-    services.register()
+    spike_services = SpikeLoadServices(hass, api, coordinator)
+    spike_services.register()
+
+    manual_services = ManualControlServices(hass, api, coordinator)
+    manual_services.register()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "api": api,
         "cancel_refresh": _cancel_refresh,
         "coordinator": coordinator,
-        "services": services,
+        "services": [spike_services, manual_services],
     }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -72,5 +75,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if cancel_refresh[0] is not None:
         cancel_refresh[0]()
     await api.close()
-    entry_data["services"].unregister()
+    for service_handler in entry_data["services"]:
+        service_handler.unregister()
     return True
