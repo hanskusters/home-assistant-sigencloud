@@ -12,3 +12,7 @@ AUTOMATION_LOAD_RECORD_ENDPOINT = (
 )
 AUTOMATION_LOAD_DELETE_ENDPOINT = "/prediction/aipv/prediction/del/automationLoad"
 MANUAL_CONTROL_ENDPOINT = "/device/energy-profile/instant/manunal"
+BATTERY_LIMIT_ENDPOINT = "/device/energy-profile/battery/limit"
+BATTERY_LIMIT_GET_ENDPOINT = "/device/energy-profile/battery/limit/{station_id}"
+# Sentinel value (uint32 max / 1000) meaning "depends on system" (no limit set)
+BATTERY_LIMIT_SYSTEM_DEFAULT = "4294967.295"

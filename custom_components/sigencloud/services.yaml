@@ -110,3 +110,53 @@ manual_control:
           step: 0.1
           unit_of_measurement: kW
           mode: box
+
+set_battery_power_limit:
+  name: Set Battery Power Limit
+  description: >
+    Set the maximum battery charging and/or discharging power used by Sigen AI
+    mode. Omitted fields keep their current value.
+  fields:
+    max_charging_power:
+      name: Max Charging Power
+      description: Maximum battery charging power in kW.
+      required: false
+      example: 10
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          unit_of_measurement: kW
+          mode: box
+    max_discharging_power:
+      name: Max Discharging Power
+      description: Maximum battery discharging power in kW.
+      required: false
+      example: 16
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          unit_of_measurement: kW
+          mode: box
+    reset_charging:
+      name: Reset Charging Limit
+      description: Reset the charging limit to 'depends on system'.
+      required: false
+      example: false
+      selector:
+        boolean:
+    reset_discharging:
+      name: Reset Discharging Limit
+      description: Reset the discharging limit to 'depends on system'.
+      required: false
+      example: false
+      selector:
+        boolean:
+
+get_battery_power_limit:
+  name: Get Battery Power Limit
+  description: >
+    Fetch the current battery charging/discharging power limits in kW.
+    A null value means 'depends on system'.
+  fields: {}
