@@ -1,7 +1,7 @@
 {
   "domain": "sigencloud",
   "name": "SigenCloud",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "documentation": "https://developer.sigencloud.com",
   "requirements": [],
   "dependencies": [],

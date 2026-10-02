@@ -6,9 +6,9 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.helpers.debounce import Debouncer
 
-from .api import SigenCloudApi, SigenCloudApiError
-from .const import DOMAIN
-from .coordinator import SpikeLoadCoordinator
+from ..api import SigenCloudApi, SigenCloudApiError
+from ..const import DOMAIN
+from ..coordinator import SpikeLoadCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 

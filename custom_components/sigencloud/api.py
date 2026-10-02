@@ -9,6 +9,7 @@ from .const import (
     SPIKE_LOAD_ENDPOINT,
     AUTOMATION_LOAD_RECORD_ENDPOINT,
     AUTOMATION_LOAD_DELETE_ENDPOINT,
+    MANUAL_CONTROL_ENDPOINT,
     USER_AGENT,
 )
 
@@ -23,7 +24,7 @@ class SigenCloudApi:
     def __init__(self, username: str, password: str, station_id: int) -> None:
         self._username = username
         self._password = password
-        self._station_id = station_id
+        self._station_id = int(station_id)
         self._token: str | None = None
         self._token_expires_at: float | None = None
         self._session: aiohttp.ClientSession | None = None
@@ -160,6 +161,30 @@ class SigenCloudApi:
             AUTOMATION_LOAD_DELETE_ENDPOINT,
             params=params,
         )
+
+    async def manual_control(
+        self,
+        *,
+        enable: bool,
+        mode: int | str | None = None,
+        duration: int | str | None = None,
+        power_limitation: str | float | None = None,
+    ) -> dict:
+        payload = {
+            "stationId": self._station_id,
+            "enable": enable,
+        }
+        if enable:
+            payload.update(
+                {
+                    "mode": str(mode),
+                    "duration": str(duration),
+                    "powerLimitation": (
+                        str(power_limitation) if power_limitation is not None else ""
+                    ),
+                }
+            )
+        return await self._request("PUT", MANUAL_CONTROL_ENDPOINT, payload)
 
     async def close(self) -> None:
         if self._session and not self._session.closed:

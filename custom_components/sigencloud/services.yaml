@@ -65,3 +65,48 @@ remove_spike_load:
       example: "2041603730691940352"
       selector:
         text:
+
+manual_control:
+  name: Manual Control
+  description: Set the station to instant manual control mode for a fixed duration.
+  fields:
+    enable:
+      name: Enable
+      description: Enable or disable manual control.
+      required: true
+      example: true
+      selector:
+        boolean:
+    mode:
+      name: Mode
+      description: "0 = charge, 1 = discharge, 2 = hold, 3 = self-consumption"
+      required: false
+      example: 2
+      selector:
+        select:
+          options:
+            - "0"
+            - "1"
+            - "2"
+            - "3"
+    duration:
+      name: Duration
+      description: Duration in minutes.
+      required: false
+      example: 30
+      selector:
+        number:
+          min: 1
+          unit_of_measurement: min
+          mode: box
+    power_limitation:
+      name: Power Limitation
+      description: Optional power limit in kW. Leave empty to disable a limit.
+      required: false
+      example: 3.5
+      selector:
+        number:
+          min: 0
+          step: 0.1
+          unit_of_measurement: kW
+          mode: box
