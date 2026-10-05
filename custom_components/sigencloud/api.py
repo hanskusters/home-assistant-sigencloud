@@ -10,6 +10,8 @@ from .const import (
     AUTOMATION_LOAD_RECORD_ENDPOINT,
     AUTOMATION_LOAD_DELETE_ENDPOINT,
     MANUAL_CONTROL_ENDPOINT,
+    BATTERY_LIMIT_ENDPOINT,
+    BATTERY_LIMIT_GET_ENDPOINT,
     USER_AGENT,
 )
 
@@ -185,6 +187,26 @@ class SigenCloudApi:
                 }
             )
         return await self._request("PUT", MANUAL_CONTROL_ENDPOINT, payload)
+
+    async def get_battery_power_limit(self) -> dict:
+        endpoint = BATTERY_LIMIT_GET_ENDPOINT.format(station_id=self._station_id)
+        response = await self._request("GET", endpoint)
+        if isinstance(response, dict) and isinstance(response.get("data"), dict):
+            return response["data"]
+        return {}
+
+    async def set_battery_power_limit(
+        self,
+        *,
+        max_charging_power: str,
+        max_discharging_power: str,
+    ) -> dict:
+        payload = {
+            "stationId": self._station_id,
+            "batteryMaxChargingPower": max_charging_power,
+            "batteryMaxDischargingPower": max_discharging_power,
+        }
+        return await self._request("PUT", BATTERY_LIMIT_ENDPOINT, payload)
 
     async def close(self) -> None:
         if self._session and not self._session.closed:

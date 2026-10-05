@@ -8,7 +8,7 @@ from homeassistant.helpers.event import async_call_later
 from .api import SigenCloudApi, SigenCloudApiError
 from .const import CONF_STATION_ID, DOMAIN
 from .coordinator import SpikeLoadCoordinator
-from .services import ManualControlServices, SpikeLoadServices
+from .services import BatteryLimitServices, ManualControlServices, SpikeLoadServices
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,11 +52,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     manual_services = ManualControlServices(hass, api, coordinator)
     manual_services.register()
 
+    battery_limit_services = BatteryLimitServices(hass, api)
+    battery_limit_services.register()
+
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "api": api,
         "cancel_refresh": _cancel_refresh,
         "coordinator": coordinator,
-        "services": [spike_services, manual_services],
+        "services": [spike_services, manual_services, battery_limit_services],
     }
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
