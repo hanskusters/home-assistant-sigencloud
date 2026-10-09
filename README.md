@@ -13,6 +13,24 @@ as sensors and devices in Home Assistant.
 3. Go to **Settings → Devices & Services → Add Integration** and search for
    **SigenCloud**.
 
+## Entities
+
+| Entity | Type | Description |
+| --- | --- | --- |
+| Spike loads | sensor | Number of scheduled spike loads (list in attributes) |
+| Manual control | select | `Off`, `Charge`, `Discharge`, `Hold`, `Self-consumption` |
+| Manual control end time | sensor | When the active manual control ends |
+| Manual control duration | number (config) | Minutes used when a manual control mode is selected |
+| Manual control power limit | number (config) | kW used when a mode is selected; `0` = no limitation |
+| Battery max charging power | number | kW; `unknown` means "depends on system" |
+| Battery max discharging power | number | kW; `unknown` means "depends on system" |
+| Reset charging limit | button | Set charging limit back to "depends on system" |
+| Reset discharging limit | button | Set discharging limit back to "depends on system" |
+| Clear spike loads | button | Remove all scheduled spike loads |
+
+The services (`sigencloud.manual_control`, `sigencloud.set_battery_power_limit`, …)
+remain available for automations.
+
 ## Disclaimer
 
 This is an **unofficial** integration. It is not affiliated with, authorized,

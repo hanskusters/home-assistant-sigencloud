@@ -19,5 +19,49 @@
     "abort": {
       "already_configured": "SigenCloud is already configured."
     }
+  },
+  "entity": {
+    "select": {
+      "manual_control": {
+        "name": "Manual control",
+        "state": {
+          "off": "Off",
+          "charge": "Charge",
+          "discharge": "Discharge",
+          "hold": "Hold",
+          "self_consumption": "Self-consumption"
+        }
+      }
+    },
+    "number": {
+      "battery_max_charging_power": {
+        "name": "Battery max charging power"
+      },
+      "battery_max_discharging_power": {
+        "name": "Battery max discharging power"
+      },
+      "manual_control_duration": {
+        "name": "Manual control duration"
+      },
+      "manual_control_power_limit": {
+        "name": "Manual control power limit"
+      }
+    },
+    "button": {
+      "reset_charging_limit": {
+        "name": "Reset charging limit"
+      },
+      "reset_discharging_limit": {
+        "name": "Reset discharging limit"
+      },
+      "clear_spike_loads": {
+        "name": "Clear spike loads"
+      }
+    },
+    "sensor": {
+      "manual_control_end_time": {
+        "name": "Manual control end time"
+      }
+    }
   }
 }

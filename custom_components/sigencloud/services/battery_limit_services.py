@@ -5,7 +5,9 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 
 from ..api import SigenCloudApi, SigenCloudApiError
-from ..const import BATTERY_LIMIT_SYSTEM_DEFAULT, DOMAIN
+from ..const import DOMAIN
+from ..coordinator import ControlCoordinator
+from ..helpers import limit_to_kw, resolve_limit
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,32 +30,16 @@ _SCHEMA_SET = vol.Schema(
 _SCHEMA_GET = vol.Schema({})
 
 
-def _to_kw(value: str | None) -> float | None:
-    """Convert an API limit string to kW; None means 'depends on system'."""
-    if value is None or value == BATTERY_LIMIT_SYSTEM_DEFAULT:
-        return None
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
 class BatteryLimitServices:
-    def __init__(self, hass: HomeAssistant, api: SigenCloudApi) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        api: SigenCloudApi,
+        coordinator: ControlCoordinator | None = None,
+    ) -> None:
         self._hass = hass
         self._api = api
-
-    @staticmethod
-    def _resolve(
-        value: float | None, reset: bool, current: str | None, name: str
-    ) -> str:
-        if value is not None and reset:
-            raise ValueError(f"Cannot set {name} and reset it at the same time")
-        if reset:
-            return BATTERY_LIMIT_SYSTEM_DEFAULT
-        if value is not None:
-            return f"{value:.3f}"
-        return current if current is not None else BATTERY_LIMIT_SYSTEM_DEFAULT
+        self._coordinator = coordinator
 
     async def _handle_set(self, call: ServiceCall) -> dict:
         charging = call.data.get("max_charging_power")
@@ -78,13 +64,13 @@ class BatteryLimitServices:
                 current = await self._api.get_battery_power_limit()
 
             result = await self._api.set_battery_power_limit(
-                max_charging_power=self._resolve(
+                max_charging_power=resolve_limit(
                     charging,
                     reset_charging,
                     current.get("batteryMaxChargingPower"),
                     "max_charging_power",
                 ),
-                max_discharging_power=self._resolve(
+                max_discharging_power=resolve_limit(
                     discharging,
                     reset_discharging,
                     current.get("batteryMaxDischargingPower"),
@@ -92,6 +78,8 @@ class BatteryLimitServices:
                 ),
             )
             _LOGGER.info("Battery power limit submitted successfully")
+            if self._coordinator is not None:
+                await self._coordinator.async_request_refresh()
             if isinstance(result, dict):
                 return {"success": result.get("data", True)}
             return {"success": bool(result)}
@@ -103,8 +91,8 @@ class BatteryLimitServices:
         try:
             data = await self._api.get_battery_power_limit()
             return {
-                "max_charging_power": _to_kw(data.get("batteryMaxChargingPower")),
-                "max_discharging_power": _to_kw(
+                "max_charging_power": limit_to_kw(data.get("batteryMaxChargingPower")),
+                "max_discharging_power": limit_to_kw(
                     data.get("batteryMaxDischargingPower")
                 ),
             }

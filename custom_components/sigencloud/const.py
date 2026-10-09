@@ -16,3 +16,11 @@ BATTERY_LIMIT_ENDPOINT = "/device/energy-profile/battery/limit"
 BATTERY_LIMIT_GET_ENDPOINT = "/device/energy-profile/battery/limit/{station_id}"
 # Sentinel value (uint32 max / 1000) meaning "depends on system" (no limit set)
 BATTERY_LIMIT_SYSTEM_DEFAULT = "4294967.295"
+MANUAL_CONTROL_GET_ENDPOINT = "/device/energy-profile/instant/manunal/{station_id}"
+# API mode value -> option key used by the manual control select entity
+MANUAL_CONTROL_MODES = {
+    0: "charge",
+    1: "discharge",
+    2: "hold",
+    3: "self_consumption",
+}
