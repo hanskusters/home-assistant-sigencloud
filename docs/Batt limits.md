@@ -1,4 +1,4 @@
-# Sigen cloud API
+# Battery limits
 
 endpoints to set battery power limit (for sigen AI mode)
 

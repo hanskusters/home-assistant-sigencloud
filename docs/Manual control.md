@@ -1,27 +1,7 @@
-# Sigen cloud API
+# Manual control
 
-- **Url**  
-`https://api-eu.sigencloud.com`
-
-- **Content-type**  
-application/json; charset=utf-8
-
-- **Authorization**  
-Bearer [access token]
-
-
-### Responses
-Seems all responses are of this format:
-```JSON
-{
-    "code": 0, // not sure
-    "msg": "success", // result state
-    "data": data // the interesting part
-}
-```
 
 ## Set manual control
-
 `PUT /device/energy-profile/instant/manunal`
 
 ### Body
