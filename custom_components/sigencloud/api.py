@@ -10,6 +10,7 @@ from .const import (
     AUTOMATION_LOAD_RECORD_ENDPOINT,
     AUTOMATION_LOAD_DELETE_ENDPOINT,
     MANUAL_CONTROL_ENDPOINT,
+    MANUAL_CONTROL_GET_ENDPOINT,
     BATTERY_LIMIT_ENDPOINT,
     BATTERY_LIMIT_GET_ENDPOINT,
     USER_AGENT,
@@ -187,6 +188,13 @@ class SigenCloudApi:
                 }
             )
         return await self._request("PUT", MANUAL_CONTROL_ENDPOINT, payload)
+
+    async def get_manual_control(self) -> dict:
+        endpoint = MANUAL_CONTROL_GET_ENDPOINT.format(station_id=self._station_id)
+        response = await self._request("GET", endpoint)
+        if isinstance(response, dict) and isinstance(response.get("data"), dict):
+            return response["data"]
+        return {}
 
     async def get_battery_power_limit(self) -> dict:
         endpoint = BATTERY_LIMIT_GET_ENDPOINT.format(station_id=self._station_id)

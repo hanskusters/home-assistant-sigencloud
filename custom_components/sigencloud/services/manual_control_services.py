@@ -7,7 +7,7 @@ from homeassistant.helpers.debounce import Debouncer
 
 from ..api import SigenCloudApi, SigenCloudApiError
 from ..const import DOMAIN
-from ..coordinator import SpikeLoadCoordinator
+from ..coordinator import ControlCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class ManualControlServices:
         self,
         hass: HomeAssistant,
         api: SigenCloudApi,
-        coordinator: SpikeLoadCoordinator | None = None,
+        coordinator: ControlCoordinator | None = None,
     ) -> None:
         self._hass = hass
         self._api = api

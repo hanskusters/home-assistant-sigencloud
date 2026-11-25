@@ -1,14 +1,23 @@
 import logging
 
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from datetime import datetime, timezone
+
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_STATION_ID, DOMAIN
-from .coordinator import SpikeLoadCoordinator
+from .const import DOMAIN
+from .coordinator import (
+    ControlCoordinator,
+    SpikeLoadCoordinator,
+    manual_control_end_time,
+)
+from .entity import SigenCloudEntity
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -52,26 +61,26 @@ async def async_setup_entry(
 ) -> None:
     entry_data = hass.data[DOMAIN][entry.entry_id]
     coordinator: SpikeLoadCoordinator = entry_data["coordinator"]
-    async_add_entities([SpikeLoadsSensor(coordinator, entry)])
+    control_coordinator: ControlCoordinator = entry_data["control_coordinator"]
+    async_add_entities(
+        [
+            SpikeLoadsSensor(coordinator, entry),
+            ManualControlEndTimeSensor(control_coordinator, entry),
+        ]
+    )
 
 
-class SpikeLoadsSensor(CoordinatorEntity[SpikeLoadCoordinator], SensorEntity):  # type: ignore[misc]
+class SpikeLoadsSensor(SigenCloudEntity, SensorEntity):
     """Sensor whose state is the number of spike loads, with the list in attributes."""
 
-    _attr_has_entity_name = True
     _attr_name = "Spike loads"
     _attr_icon = "mdi:lightning-bolt"
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator: SpikeLoadCoordinator, entry: ConfigEntry) -> None:
-        super().__init__(coordinator)
-        station_id = entry.data[CONF_STATION_ID]
-        self._attr_unique_id = f"{entry.entry_id}_spike_loads"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, str(station_id))},
-            name="SigenCloud",
-            manufacturer="Sigenergy",
-        )
+        super().__init__(coordinator, entry, "spike_loads")
+        # Keep the explicit name so the existing entity_id is unchanged
+        self._attr_translation_key = None
         self._update_from_coordinator()
 
     @callback
@@ -98,3 +107,20 @@ class SpikeLoadsSensor(CoordinatorEntity[SpikeLoadCoordinator], SensorEntity):  
                 for item in records
             ]
         }
+
+
+class ManualControlEndTimeSensor(SigenCloudEntity, SensorEntity):
+    """Timestamp at which the active manual control ends (unknown when off)."""
+
+    _attr_icon = "mdi:timer-outline"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: ControlCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator, entry, "manual_control_end_time")
+
+    @property
+    def native_value(self) -> datetime | None:
+        end_time = manual_control_end_time(self.coordinator.data)
+        if end_time is None:
+            return None
+        return datetime.fromtimestamp(end_time, tz=timezone.utc)

@@ -58,3 +58,17 @@ To disable manual control, send only:
 ```
 
 
+## Get manual control
+`GET /device/energy-profile/instant/manunal/{stationId}`
+
+```JSON
+{
+    "code": 0,
+    "msg": "success",
+    "data": {
+        "enable": false, // true when enabled
+        "mode": "2", // the mode when enabled
+        "endTime": "1790590201" // when the manual mode will end
+    }
+}
+```

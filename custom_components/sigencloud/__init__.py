@@ -7,12 +7,13 @@ from homeassistant.helpers.event import async_call_later
 
 from .api import SigenCloudApi, SigenCloudApiError
 from .const import CONF_STATION_ID, DOMAIN
-from .coordinator import SpikeLoadCoordinator
+from .coordinator import ControlCoordinator, SpikeLoadCoordinator
+from .entity import ManualControlSettings
 from .services import BatteryLimitServices, ManualControlServices, SpikeLoadServices
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS = ["sensor"]
+PLATFORMS = ["sensor", "select", "number", "button"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -46,19 +47,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = SpikeLoadCoordinator(hass, api)
     await coordinator.async_config_entry_first_refresh()
 
+    control_coordinator = ControlCoordinator(hass, api)
+    await control_coordinator.async_config_entry_first_refresh()
+
     spike_services = SpikeLoadServices(hass, api, coordinator)
     spike_services.register()
 
-    manual_services = ManualControlServices(hass, api, coordinator)
+    manual_services = ManualControlServices(hass, api, control_coordinator)
     manual_services.register()
 
-    battery_limit_services = BatteryLimitServices(hass, api)
+    battery_limit_services = BatteryLimitServices(hass, api, control_coordinator)
     battery_limit_services.register()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
         "api": api,
         "cancel_refresh": _cancel_refresh,
         "coordinator": coordinator,
+        "control_coordinator": control_coordinator,
+        "manual_control_settings": ManualControlSettings(),
         "services": [spike_services, manual_services, battery_limit_services],
     }
 
@@ -77,6 +83,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     cancel_refresh = entry_data["cancel_refresh"]
     if cancel_refresh[0] is not None:
         cancel_refresh[0]()
+    entry_data["control_coordinator"].cancel_end_refresh()
     await api.close()
     for service_handler in entry_data["services"]:
         service_handler.unregister()
