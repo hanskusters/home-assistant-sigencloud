@@ -5,6 +5,7 @@ from typing import Callable
 
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.event import async_call_later
+from homeassistant.util import dt as dt_util
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import SigenCloudApi, SigenCloudApiError
@@ -97,3 +98,26 @@ class ControlCoordinator(DataUpdateCoordinator[dict]):
         if self._cancel_end_refresh is not None:
             self._cancel_end_refresh()
             self._cancel_end_refresh = None
+
+
+class AIPredictionCoordinator(DataUpdateCoordinator[dict]):
+    """Coordinator that periodically fetches today's and tomorrow's predictions."""
+
+    def __init__(self, hass: HomeAssistant, api: SigenCloudApi) -> None:
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=f"{DOMAIN}_ai_predictions",
+            update_interval=UPDATE_INTERVAL,
+        )
+        self._api = api
+
+    async def _async_update_data(self) -> dict:
+        today = dt_util.now().date()
+        tomorrow = today + timedelta(days=1)
+        try:
+            return await self._api.get_ai_predictions(
+                today.strftime("%Y%m%d"), tomorrow.strftime("%Y%m%d")
+            )
+        except SigenCloudApiError as err:
+            raise UpdateFailed(f"Failed to fetch AI predictions: {err}") from err

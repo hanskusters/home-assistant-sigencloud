@@ -13,6 +13,7 @@ from .const import (
     MANUAL_CONTROL_GET_ENDPOINT,
     BATTERY_LIMIT_ENDPOINT,
     BATTERY_LIMIT_GET_ENDPOINT,
+    AI_PREDICTION_ENDPOINT,
     USER_AGENT,
 )
 
@@ -199,6 +200,21 @@ class SigenCloudApi:
     async def get_battery_power_limit(self) -> dict:
         endpoint = BATTERY_LIMIT_GET_ENDPOINT.format(station_id=self._station_id)
         response = await self._request("GET", endpoint)
+        if isinstance(response, dict) and isinstance(response.get("data"), dict):
+            return response["data"]
+        return {}
+
+    async def get_ai_predictions(self, start_date: str, end_date: str) -> dict:
+        response = await self._request(
+            "GET",
+            AI_PREDICTION_ENDPOINT,
+            params={
+                "stationId": self._station_id,
+                "dateFlag": 1,
+                "startDate": start_date,
+                "endDate": end_date,
+            },
+        )
         if isinstance(response, dict) and isinstance(response.get("data"), dict):
             return response["data"]
         return {}

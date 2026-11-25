@@ -7,7 +7,11 @@ from homeassistant.helpers.event import async_call_later
 
 from .api import SigenCloudApi, SigenCloudApiError
 from .const import CONF_STATION_ID, DOMAIN
-from .coordinator import ControlCoordinator, SpikeLoadCoordinator
+from .coordinator import (
+    AIPredictionCoordinator,
+    ControlCoordinator,
+    SpikeLoadCoordinator,
+)
 from .entity import ManualControlSettings
 from .services import BatteryLimitServices, ManualControlServices, SpikeLoadServices
 
@@ -50,6 +54,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     control_coordinator = ControlCoordinator(hass, api)
     await control_coordinator.async_config_entry_first_refresh()
 
+    ai_prediction_coordinator = AIPredictionCoordinator(hass, api)
+    await ai_prediction_coordinator.async_config_entry_first_refresh()
+
     spike_services = SpikeLoadServices(hass, api, coordinator)
     spike_services.register()
 
@@ -65,6 +72,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "coordinator": coordinator,
         "control_coordinator": control_coordinator,
         "manual_control_settings": ManualControlSettings(),
+        "ai_prediction_coordinator": ai_prediction_coordinator,
         "services": [spike_services, manual_services, battery_limit_services],
     }
 

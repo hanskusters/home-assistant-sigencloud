@@ -13,6 +13,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import (
+    AIPredictionCoordinator,
     ControlCoordinator,
     SpikeLoadCoordinator,
     manual_control_end_time,
@@ -62,10 +63,14 @@ async def async_setup_entry(
     entry_data = hass.data[DOMAIN][entry.entry_id]
     coordinator: SpikeLoadCoordinator = entry_data["coordinator"]
     control_coordinator: ControlCoordinator = entry_data["control_coordinator"]
+    ai_prediction_coordinator: AIPredictionCoordinator = entry_data[
+        "ai_prediction_coordinator"
+    ]
     async_add_entities(
         [
             SpikeLoadsSensor(coordinator, entry),
             ManualControlEndTimeSensor(control_coordinator, entry),
+            AIPredictionsSensor(ai_prediction_coordinator, entry),
         ]
     )
 
@@ -124,3 +129,51 @@ class ManualControlEndTimeSensor(SigenCloudEntity, SensorEntity):
         if end_time is None:
             return None
         return datetime.fromtimestamp(end_time, tz=timezone.utc)
+
+
+class AIPredictionsSensor(SigenCloudEntity, SensorEntity):
+    """One sensor containing all forecast series and their timestamped points."""
+
+    _attr_has_entity_name = True
+    _attr_name = "AI predictions"
+    _attr_icon = "mdi:chart-line"
+
+    def __init__(
+        self, coordinator: AIPredictionCoordinator, entry: ConfigEntry
+    ) -> None:
+        super().__init__(coordinator, entry, "ai_predictions")
+        self._attr_translation_key = None
+        self._update_from_coordinator()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        self._update_from_coordinator()
+        super()._handle_coordinator_update()
+
+    def _update_from_coordinator(self) -> None:
+        prediction = self.coordinator.data or {}
+        chart_data = prediction.get("chartData") or {}
+        series = {
+            item["id"].lower(): [
+                {"time": point.get("time"), "value": point.get("value")}
+                for point in item.get("points", [])
+                if isinstance(point, dict)
+            ]
+            for item in chart_data.get("dataSeries", [])
+            if isinstance(item, dict) and isinstance(item.get("id"), str)
+        }
+        self._attr_native_value = prediction.get("status", "unknown")
+        self._attr_extra_state_attributes = {
+            "estimated_date": prediction.get("estimatedDate"),
+            "chart_name": chart_data.get("chartName"),
+            "unit": chart_data.get("unit"),
+            "chart_type": chart_data.get("chartType"),
+            **series,
+            "pre_time_period_total": chart_data.get("preTimePeriodTotal"),
+            "buy_tariff_prediction_boundary_time": chart_data.get(
+                "buyTariffPredictionBoundaryTime"
+            ),
+            "sell_tariff_prediction_boundary_time": chart_data.get(
+                "sellTariffPredictionBoundaryTime"
+            ),
+        }
